@@ -33,14 +33,6 @@ app.get("/player", (req, res) => {
   res.sendFile(__dirname + "/public/main.html");
 });
 
-// GET /import-tracks // imports all tracks from the audio folder
-
-app.get("/import-tracks", (req, res) => {
-  importSongsToDb()
-    .then((result) => res.status(200).json(result))
-    .catch((err) => console.log(err));
-});
-
 // GET /playlists
 
 app.get("/playlists", (req, res) => {
@@ -49,7 +41,7 @@ app.get("/playlists", (req, res) => {
     .catch((err) => console.log(err));
 });
 
-// POST /playlists // adds new playlist, title is required
+// POST /playlists // adds new playlist / title is required
 
 app.post("/playlists", (req, res) => {
   let title = req.body.title;
@@ -92,10 +84,29 @@ app.delete("/playlists/:id", (req, res) => {
   }
 });
 
-// GET /playlist-tracks // returns all tracks
+// GET /import-tracks // imports all tracks from the audio folder
+
+app.get("/import-tracks", (req, res) => {
+  importSongsToDb()
+    .then((result) => res.status(200).json(result))
+    .catch((err) => console.log(err));
+});
+
+// GET /playlist-tracks/
+// return all tracks
 
 app.get("/playlist-tracks", (req, res) => {
   getAllTracks(undefined)
+    .then((result) => res.status(200).json(result))
+    .catch((err) => console.log(err));
+});
+
+// GET /playlist-tracks/:playlist_id
+
+app.get("/playlist-tracks/:playlist_id", (req, res) => {
+  let playlist_id = req.params.playlist_id;
+
+  getAllTracks(playlist_id)
     .then((result) => res.status(200).json(result))
     .catch((err) => console.log(err));
 });
@@ -110,7 +121,7 @@ app.post("/playlist-tracks/:playlist_id/:track_id", (req, res) => {
     .catch((err) => console.log(err));
 });
 
-// GET /playlist-tracks/:playlist_id/:track_id // returns boolean
+// GET /playlist-tracks/:playlist_id/:track_id
 
 app.get("/playlist-tracks/:playlist_id/:track_id", (req, res) => {
   let { playlist_id, track_id } = req.params;
@@ -140,34 +151,12 @@ function queryDb(sqlQuery, valuesArr) {
   });
 }
 
-// importing data to database
 function readFileNames() {
   let songsInDir = [];
   fs.readdirSync(audioFolder).forEach((file) => {
     songsInDir.push(file);
   });
   return songsInDir;
-}
-
-async function importSongsToDb() {
-  let folderSongs = readFileNames();
-  let folderSongsPaths = [];
-  for (let i = 0; i < folderSongs.length; i++) {
-    let song = await getMeta(folderSongs[i]);
-    folderSongsPaths.push(song.path);
-  }
-
-  for (let i = 0; i < folderSongsPaths.length; i++) {
-    let duplicateSong = await queryDb("SELECT * FROM tracks WHERE path = ?", [
-      folderSongsPaths[i],
-    ]);
-    if (duplicateSong.length == 0) {
-      await queryDb("INSERT INTO tracks (path) VALUES (?)", [
-        folderSongsPaths[i],
-      ]);
-    }
-  }
-  return await queryDb("SELECT * FROM tracks");
 }
 
 function promisifyMeta(fileName) {
@@ -196,49 +185,26 @@ async function getMeta(fileName) {
   };
 }
 
-// create playlist
+async function importSongsToDb() {
+  let folderSongs = readFileNames();
+  let folderSongsPaths = [];
+  for (let i = 0; i < folderSongs.length; i++) {
+    let song = await getMeta(folderSongs[i]);
+    folderSongsPaths.push(song.path);
+  }
 
-async function createPlaylist(title) {
-  let select = await queryDb("SELECT * FROM playlists WHERE title = ?", [
-    title,
-  ]);
-  if (select.length > 0) {
-    return {
-      message: "This title is already in use.",
-    };
-  } else {
-    let insert = await queryDb("INSERT INTO playlists (title) VALUES (?)", [
-      title,
+  for (let i = 0; i < folderSongsPaths.length; i++) {
+    let duplicateSong = await queryDb("SELECT * FROM tracks WHERE path = ?", [
+      folderSongsPaths[i],
     ]);
-    return {
-      message: `The playlist ${title} was added.`,
-    };
+    if (duplicateSong.length == 0) {
+      await queryDb("INSERT INTO tracks (path) VALUES (?)", [
+        folderSongsPaths[i],
+      ]);
+    }
   }
+  return await queryDb("SELECT * FROM tracks");
 }
-
-// delete playlist
-
-async function deletePlaylist(id) {
-  let select = await queryDb(
-    "SELECT * FROM playlists WHERE system_rank = ? AND id = ?",
-    [1, id]
-  );
-  if (select.length > 0) {
-    return {
-      message: "This playlist cannot be deleted.",
-    };
-  }
-  let response = await queryDb("DELETE FROM playlists WHERE id = ?", [id]);
-  if (response.affectedRows == 0) {
-    return {
-      message: "Something went wrong. No playlist was deleted.",
-    };
-  } else {
-    return response;
-  }
-}
-
-// get all tracks
 
 async function getAllTracks(playlist_id) {
   let queryIfPlaylistId =
@@ -265,7 +231,43 @@ async function getAllTracks(playlist_id) {
   return allTracksInfo;
 }
 
-// add to playlist
+async function deletePlaylist(id) {
+  let select = await queryDb(
+    "SELECT * FROM playlists WHERE system_rank = ? AND id = ?",
+    [1, id]
+  );
+  if (select.length > 0) {
+    return {
+      message: "This playlist cannot be deleted.",
+    };
+  }
+  let response = await queryDb("DELETE FROM playlists WHERE id = ?", [id]);
+  if (response.affectedRows == 0) {
+    return {
+      message: "Something went wrong. No playlist was deleted.",
+    };
+  } else {
+    return response;
+  }
+}
+
+async function createPlaylist(title) {
+  let select = await queryDb("SELECT * FROM playlists WHERE title = ?", [
+    title,
+  ]);
+  if (select.length > 0) {
+    return {
+      message: "This title is already in use.",
+    };
+  } else {
+    let insert = await queryDb("INSERT INTO playlists (title) VALUES (?)", [
+      title,
+    ]);
+    return {
+      message: `The playlist ${title} was added.`,
+    };
+  }
+}
 
 async function addToPlaylist(track_id, playlist_id) {
   let select = await queryDb(
@@ -290,8 +292,6 @@ async function addToPlaylist(track_id, playlist_id) {
     };
   }
 }
-
-// returns true if track is on the specified playlist
 
 async function isTrackOnPlaylist(playlist_id, track_id) {
   let select = await queryDb(
