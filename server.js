@@ -110,6 +110,16 @@ app.post('/playlist-tracks/:playlist_id/:track_id', (req, res) => {
     .catch(err => console.log(err))
 })
 
+// GET /playlist-tracks/:playlist_id/:track_id // returns boolean
+
+app.get('/playlist-tracks/:playlist_id/:track_id', (req, res) => {
+    let { playlist_id, track_id } = req.params;
+
+    isTrackOnPlaylist(playlist_id, track_id)
+    .then(result => res.status(200).json(result))
+    .catch(err => console.log(err))
+})
+
 // PORT LISTEN
 
 app.listen(port, () => {
@@ -268,4 +278,14 @@ async function addToPlaylist(track_id, playlist_id) {
             'message': 'The song was added to the playlist '
         }
     }
+}
+
+// returns true if track is on the specified playlist
+
+async function isTrackOnPlaylist(playlist_id, track_id) {
+    let select = await queryDb('SELECT * FROM playlist_content WHERE playlist_id = ? AND track_id = ?;', [playlist_id, track_id]);
+    if(select.length > 0) {
+        return true;
+    }
+    return false;
 }
