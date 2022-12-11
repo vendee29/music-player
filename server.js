@@ -33,6 +33,14 @@ app.get("/player", (req, res) => {
   res.sendFile(__dirname + "/public/main.html");
 });
 
+// GET /import-tracks // imports all tracks from the audio folder
+
+app.get("/import-tracks", (req, res) => {
+  importSongsToDb()
+    .then((result) => res.status(200).json(result))
+    .catch((err) => console.log(err));
+});
+
 // GET /playlists
 
 app.get("/playlists", (req, res) => {
@@ -102,6 +110,62 @@ function queryDb(sqlQuery, valuesArr) {
       }
     });
   });
+}
+
+// importing data to database
+function readFileNames() {
+  let songsInDir = [];
+  fs.readdirSync(audioFolder).forEach((file) => {
+    songsInDir.push(file);
+  });
+  return songsInDir;
+}
+
+async function importSongsToDb() {
+  let folderSongs = readFileNames();
+  let folderSongsPaths = [];
+  for (let i = 0; i < folderSongs.length; i++) {
+    let song = await getMeta(folderSongs[i]);
+    folderSongsPaths.push(song.path);
+  }
+
+  for (let i = 0; i < folderSongsPaths.length; i++) {
+    let duplicateSong = await queryDb("SELECT * FROM tracks WHERE path = ?", [
+      folderSongsPaths[i],
+    ]);
+    if (duplicateSong.length == 0) {
+      await queryDb("INSERT INTO tracks (path) VALUES (?)", [
+        folderSongsPaths[i],
+      ]);
+    }
+  }
+  return await queryDb("SELECT * FROM tracks");
+}
+
+function promisifyMeta(fileName) {
+  return new Promise((resolve, reject) => {
+    const readableStream = fs.createReadStream(
+      __dirname + `/public/audio/${fileName}`
+    );
+    mm(readableStream, { duration: true }, (err, metadata) => {
+      if (err) {
+        return reject(err);
+      } else {
+        readableStream.close();
+        return resolve(metadata);
+      }
+    });
+  });
+}
+
+async function getMeta(fileName) {
+  let metadata = await promisifyMeta(fileName);
+  return {
+    title: metadata.title,
+    artist: metadata.artist[0],
+    duration: metadata.duration,
+    path: `/audio/${fileName}`,
+  };
 }
 
 // create playlist
