@@ -53,6 +53,19 @@ audio.addEventListener("timeupdate", updateProgress);
 
 progressBar.addEventListener("click", setProgress);
 
+// ADD PLAYLIST
+
+addPlaylist.addEventListener("click", addNewPlaylist);
+
+// RENDER PLAYLISTS TABLE
+
+fetch("/playlists")
+  .then((res) => res.json())
+  .then((result) => {
+    renderPlaylistsTable(result);
+  })
+  .catch((err) => console.log(err));
+
 // RENDER ALL TRACKS
 
 allTracksPlaylist.addEventListener("click", () => {
