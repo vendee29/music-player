@@ -47,6 +47,14 @@ playBtn.addEventListener("click", () => {
     }
   });
 
+  // PROGRESS BAR
+
+audio.addEventListener("timeupdate", updateProgress);
+
+progressBar.addEventListener("click", setProgress);
+
+
+
 // HELPER FUNCTIONS
 
 function loadTrack(track_id) {
@@ -127,3 +135,106 @@ function loadTrack(track_id) {
     }
   }
   
+  function selectPlaylistRow(className) {
+    let rows = document.querySelectorAll(`.${className} tr`);
+    for (let j = 0; j < rows.length; j++) {
+      rows[j].addEventListener("click", () => {
+        setNotSelectedRow(`${className}`);
+        rows[j].classList.remove("not-selected");
+        rows[j].classList.add("selected");
+      });
+    }
+  }
+  
+  function renderPlaylistsTracks(api) {
+    tracksTable.innerHTML = "";
+    localStorage.setItem("index", 0);
+  
+    fetch(api)
+      .then((res) => res.json())
+      .then((result) => {
+        renderTracksTable(result);
+      })
+      .catch((err) => console.log(err));
+  }
+  
+  function playNextSong() {
+    let trackRows = document.querySelectorAll(".tracks-table tr");
+  
+    if (shuffleBtn.classList.contains("shuffle-off")) {
+      let songIndex = parseInt(localStorage.getItem("index"));
+  
+      if (songIndex == trackRows.length - 1) {
+        songIndex = 0;
+      } else {
+        songIndex++;
+      }
+  
+      let nextTrackId = trackRows[songIndex].getAttribute("track_id");
+      loadTrack(nextTrackId);
+      localStorage.setItem("index", songIndex);
+  
+      if (songIndex == 0) {
+        setNotSelectedRow("tracks-table");
+        trackRows[songIndex].setAttribute("class", "selected");
+      } else {
+        trackRows[songIndex - 1].setAttribute("class", "not-selected");
+        trackRows[songIndex].setAttribute("class", "selected");
+      }
+    } else {
+    
+      let songIndex = Math.round(Math.random() * (trackRows.length - 1));
+      let nextTrackId = trackRows[songIndex].getAttribute("track_id");
+  
+      setNotSelectedRow("tracks-table");
+      trackRows[songIndex].setAttribute("class", "selected");
+      loadTrack(nextTrackId);
+  
+      localStorage.setItem("index", songIndex);
+    }
+  }
+  
+  function playPreviousSong() {
+    let trackRows = document.querySelectorAll(".tracks-table tr");
+    let songIndex = parseInt(localStorage.getItem("index"));
+  
+    if (songIndex == 0) {
+      songIndex = trackRows.length - 1;
+    } else {
+      songIndex--;
+    }
+  
+    let prevTrackId = trackRows[songIndex].getAttribute("track_id");
+    loadTrack(prevTrackId);
+  
+    localStorage.setItem("index", songIndex);
+  
+    if (songIndex == trackRows.length - 1) {
+      setNotSelectedRow("tracks-table");
+      trackRows[songIndex].setAttribute("class", "selected");
+    } else {
+      trackRows[songIndex + 1].setAttribute("class", "not-selected");
+      trackRows[songIndex].setAttribute("class", "selected");
+    }
+  }
+  
+  function updateProgress(event) {
+    let { duration, currentTime } = event.srcElement;
+  
+    if (isNaN(duration)) {
+      duration = 0;
+    }
+  
+    let progressPercent = (currentTime / duration) * 100;
+  
+    progressBar.value = progressPercent;
+    currentTimePoint.textContent = getTime(currentTime);
+    endTime.textContent = getTime(duration);
+  }
+  
+  function setProgress(event) {
+    let width = 260;
+    let click = event.offsetX;
+    let duration = audio.duration;
+    audio.currentTime = (click / width) * duration;
+  }
