@@ -53,7 +53,11 @@ audio.addEventListener("timeupdate", updateProgress);
 
 progressBar.addEventListener("click", setProgress);
 
+// RENDER ALL TRACKS
 
+allTracksPlaylist.addEventListener("click", () => {
+    renderPlaylistsTracks("/playlist-tracks");
+  });
 
 // HELPER FUNCTIONS
 
@@ -237,4 +241,35 @@ function loadTrack(track_id) {
     let click = event.offsetX;
     let duration = audio.duration;
     audio.currentTime = (click / width) * duration;
+  }
+
+  function addNewPlaylist() {
+    let newPlaylist = prompt("Please name your new playlist:");
+  
+    if (!newPlaylist) {
+      notifications.innerHTML = "No playlist was added.";
+      setTimeout(clearNotifications, 5000);
+      return;
+    } else {
+      let playlistTitle = {
+        title: newPlaylist,
+      };
+      fetchContent("/playlists", "POST", playlistTitle)
+        .then((res) => res.json())
+        .then((result) => {
+          notifications.innerHTML = result.message;
+          setTimeout(clearNotifications, 5000);
+        })
+        .catch((err) => console.log(err));
+    }
+  }
+  
+  async function fetchContent(api, method, bodyValues) {
+    return await fetch(api, {
+      method: method,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(bodyValues),
+    });
   }
