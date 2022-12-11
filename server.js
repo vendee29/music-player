@@ -94,31 +94,31 @@ app.delete("/playlists/:id", (req, res) => {
 
 // GET /playlist-tracks // returns all tracks
 
-app.get('/playlist-tracks', (req, res) => {
-    getAllTracks(undefined)
-    .then(result => res.status(200).json(result))
-    .catch(err => console.log(err))
+app.get("/playlist-tracks", (req, res) => {
+  getAllTracks(undefined)
+    .then((result) => res.status(200).json(result))
+    .catch((err) => console.log(err));
 });
 
 // POST /playlist-tracks/:playlist_id // Adds the track to the playlist identified by playlist_id
 
-app.post('/playlist-tracks/:playlist_id/:track_id', (req, res) => {
-    let { playlist_id, track_id } = req.params;
-    
-    addToPlaylist(track_id, playlist_id)
-    .then(result => res.status(200).json(result))
-    .catch(err => console.log(err))
-})
+app.post("/playlist-tracks/:playlist_id/:track_id", (req, res) => {
+  let { playlist_id, track_id } = req.params;
+
+  addToPlaylist(track_id, playlist_id)
+    .then((result) => res.status(200).json(result))
+    .catch((err) => console.log(err));
+});
 
 // GET /playlist-tracks/:playlist_id/:track_id // returns boolean
 
-app.get('/playlist-tracks/:playlist_id/:track_id', (req, res) => {
-    let { playlist_id, track_id } = req.params;
+app.get("/playlist-tracks/:playlist_id/:track_id", (req, res) => {
+  let { playlist_id, track_id } = req.params;
 
-    isTrackOnPlaylist(playlist_id, track_id)
-    .then(result => res.status(200).json(result))
-    .catch(err => console.log(err))
-})
+  isTrackOnPlaylist(playlist_id, track_id)
+    .then((result) => res.status(200).json(result))
+    .catch((err) => console.log(err));
+});
 
 // PORT LISTEN
 
@@ -241,51 +241,65 @@ async function deletePlaylist(id) {
 // get all tracks
 
 async function getAllTracks(playlist_id) {
-    let queryIfPlaylistId = 'SELECT tracks.id, path, playlist_id FROM tracks LEFT JOIN playlist_content ON tracks.id = track_id WHERE playlist_id = ?';
-    let queryIfNoPlaylistId = 'SELECT tracks.id, path, playlist_id FROM tracks LEFT JOIN playlist_content ON tracks.id = track_id GROUP BY tracks.id;';
-    let query = playlist_id ? queryIfPlaylistId : queryIfNoPlaylistId;
+  let queryIfPlaylistId =
+    "SELECT tracks.id, path, playlist_id FROM tracks LEFT JOIN playlist_content ON tracks.id = track_id WHERE playlist_id = ?";
+  let queryIfNoPlaylistId =
+    "SELECT tracks.id, path, playlist_id FROM tracks LEFT JOIN playlist_content ON tracks.id = track_id GROUP BY tracks.id;";
+  let query = playlist_id ? queryIfPlaylistId : queryIfNoPlaylistId;
 
-    let allTracks = await queryDb(query, [playlist_id]);
-    let allTracksInfo = [];
+  let allTracks = await queryDb(query, [playlist_id]);
+  let allTracksInfo = [];
 
-    for(let i = 0; i < allTracks.length; i++) {
-        let fileName = allTracks[i].path.split('/')[2];
-        let meta = await getMeta(fileName)
-        let track = {};
-        track.id = allTracks[i].id;
-        track.title = meta.title;
-        track.artist = meta.artist;
-        track.duration = meta.duration;
-        track.path = allTracks[i].path;
-        allTracksInfo.push(track);
-    }
+  for (let i = 0; i < allTracks.length; i++) {
+    let fileName = allTracks[i].path.split("/")[2];
+    let meta = await getMeta(fileName);
+    let track = {};
+    track.id = allTracks[i].id;
+    track.title = meta.title;
+    track.artist = meta.artist;
+    track.duration = meta.duration;
+    track.path = allTracks[i].path;
+    allTracksInfo.push(track);
+  }
 
-    return allTracksInfo;
+  return allTracksInfo;
 }
 
 // add to playlist
 
 async function addToPlaylist(track_id, playlist_id) {
-    let select = await queryDb('SELECT * FROM playlist_content WHERE track_id = ? AND playlist_id = ?', [track_id, playlist_id]);
-    if(select.length > 0) {
-        await queryDb('DELETE FROM playlist_content WHERE track_id = ? AND playlist_id = ?', [track_id, playlist_id]);
-        return {
-            'message': 'The song was removed from the playlist '
-        }
-    } else {
-        await queryDb('INSERT INTO playlist_content (track_id, playlist_id) VALUES (?, ?)', [track_id, playlist_id]);
-        return {
-            'message': 'The song was added to the playlist '
-        }
-    }
+  let select = await queryDb(
+    "SELECT * FROM playlist_content WHERE track_id = ? AND playlist_id = ?",
+    [track_id, playlist_id]
+  );
+  if (select.length > 0) {
+    await queryDb(
+      "DELETE FROM playlist_content WHERE track_id = ? AND playlist_id = ?",
+      [track_id, playlist_id]
+    );
+    return {
+      message: "The song was removed from the playlist ",
+    };
+  } else {
+    await queryDb(
+      "INSERT INTO playlist_content (track_id, playlist_id) VALUES (?, ?)",
+      [track_id, playlist_id]
+    );
+    return {
+      message: "The song was added to the playlist ",
+    };
+  }
 }
 
 // returns true if track is on the specified playlist
 
 async function isTrackOnPlaylist(playlist_id, track_id) {
-    let select = await queryDb('SELECT * FROM playlist_content WHERE playlist_id = ? AND track_id = ?;', [playlist_id, track_id]);
-    if(select.length > 0) {
-        return true;
-    }
-    return false;
+  let select = await queryDb(
+    "SELECT * FROM playlist_content WHERE playlist_id = ? AND track_id = ?;",
+    [playlist_id, track_id]
+  );
+  if (select.length > 0) {
+    return true;
+  }
+  return false;
 }
