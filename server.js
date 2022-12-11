@@ -49,7 +49,7 @@ app.get("/playlists", (req, res) => {
     .catch((err) => console.log(err));
 });
 
-// POST /playlists // title is required
+// POST /playlists // adds new playlist, title is required
 
 app.post("/playlists", (req, res) => {
   let title = req.body.title;
@@ -91,6 +91,14 @@ app.delete("/playlists/:id", (req, res) => {
       .catch((err) => console.log(err));
   }
 });
+
+// GET /playlist-tracks // returns all tracks
+
+app.get('/playlist-tracks', (req, res) => {
+    getAllTracks(undefined)
+    .then(result => res.status(200).json(result))
+    .catch(err => console.log(err))
+})
 
 // PORT LISTEN
 
@@ -208,4 +216,29 @@ async function deletePlaylist(id) {
   } else {
     return response;
   }
+}
+
+// get all tracks
+
+async function getAllTracks(playlist_id) {
+    let queryIfPlaylistId = 'SELECT tracks.id, path, playlist_id FROM tracks LEFT JOIN playlist_content ON tracks.id = track_id WHERE playlist_id = ?';
+    let queryIfNoPlaylistId = 'SELECT tracks.id, path, playlist_id FROM tracks LEFT JOIN playlist_content ON tracks.id = track_id GROUP BY tracks.id;';
+    let query = playlist_id ? queryIfPlaylistId : queryIfNoPlaylistId;
+
+    let allTracks = await queryDb(query, [playlist_id]);
+    let allTracksInfo = [];
+
+    for(let i = 0; i < allTracks.length; i++) {
+        let fileName = allTracks[i].path.split('/')[2];
+        let meta = await getMeta(fileName)
+        let track = {};
+        track.id = allTracks[i].id;
+        track.title = meta.title;
+        track.artist = meta.artist;
+        track.duration = meta.duration;
+        track.path = allTracks[i].path;
+        allTracksInfo.push(track);
+    }
+
+    return allTracksInfo;
 }
