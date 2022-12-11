@@ -1,12 +1,10 @@
 "use strict";
 
+const utils = require("./utils");
 const mysql = require("mysql");
 const express = require("express");
 const app = express();
 const port = 3000;
-const mm = require("musicmetadata");
-const fs = require("fs");
-const audioFolder = "public/audio";
 
 app.use(express.json());
 app.use(express.static("public"));
@@ -151,40 +149,6 @@ function queryDb(sqlQuery, valuesArr) {
   });
 }
 
-function readFileNames() {
-  let songsInDir = [];
-  fs.readdirSync(audioFolder).forEach((file) => {
-    songsInDir.push(file);
-  });
-  return songsInDir;
-}
-
-function promisifyMeta(fileName) {
-  return new Promise((resolve, reject) => {
-    const readableStream = fs.createReadStream(
-      __dirname + `/public/audio/${fileName}`
-    );
-    mm(readableStream, { duration: true }, (err, metadata) => {
-      if (err) {
-        return reject(err);
-      } else {
-        readableStream.close();
-        return resolve(metadata);
-      }
-    });
-  });
-}
-
-async function getMeta(fileName) {
-  let metadata = await promisifyMeta(fileName);
-  return {
-    title: metadata.title,
-    artist: metadata.artist[0],
-    duration: metadata.duration,
-    path: `/audio/${fileName}`,
-  };
-}
-
 async function importSongsToDb() {
   let folderSongs = readFileNames();
   let folderSongsPaths = [];
@@ -218,7 +182,7 @@ async function getAllTracks(playlist_id) {
 
   for (let i = 0; i < allTracks.length; i++) {
     let fileName = allTracks[i].path.split("/")[2];
-    let meta = await getMeta(fileName);
+    let meta = await utils.getMeta(fileName);
     let track = {};
     track.id = allTracks[i].id;
     track.title = meta.title;
