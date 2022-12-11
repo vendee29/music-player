@@ -98,6 +98,16 @@ app.get('/playlist-tracks', (req, res) => {
     getAllTracks(undefined)
     .then(result => res.status(200).json(result))
     .catch(err => console.log(err))
+});
+
+// POST /playlist-tracks/:playlist_id // Adds the track to the playlist identified by playlist_id
+
+app.post('/playlist-tracks/:playlist_id/:track_id', (req, res) => {
+    let { playlist_id, track_id } = req.params;
+    
+    addToPlaylist(track_id, playlist_id)
+    .then(result => res.status(200).json(result))
+    .catch(err => console.log(err))
 })
 
 // PORT LISTEN
@@ -241,4 +251,21 @@ async function getAllTracks(playlist_id) {
     }
 
     return allTracksInfo;
+}
+
+// add to playlist
+
+async function addToPlaylist(track_id, playlist_id) {
+    let select = await queryDb('SELECT * FROM playlist_content WHERE track_id = ? AND playlist_id = ?', [track_id, playlist_id]);
+    if(select.length > 0) {
+        await queryDb('DELETE FROM playlist_content WHERE track_id = ? AND playlist_id = ?', [track_id, playlist_id]);
+        return {
+            'message': 'The song was removed from the playlist '
+        }
+    } else {
+        await queryDb('INSERT INTO playlist_content (track_id, playlist_id) VALUES (?, ?)', [track_id, playlist_id]);
+        return {
+            'message': 'The song was added to the playlist '
+        }
+    }
 }
