@@ -53,6 +53,28 @@ audio.addEventListener("timeupdate", updateProgress);
 
 progressBar.addEventListener("click", setProgress);
 
+// LOGO ANIMATION
+
+audio.onplay = () => {
+    if (logo.classList.contains("paused")) {
+      logo.classList.remove("paused");
+    }
+  };
+  
+  audio.onpause = () => {
+    if (!logo.classList.contains("paused")) {
+      logo.classList.add("paused");
+    }
+  };
+  
+  // LOGO => ALL TRACKS
+  
+  logo.addEventListener("click", () => {
+    renderPlaylistsTracks("/playlist-tracks");
+    setNotSelectedRow("playlists-table-tbody");
+    setSelectedRow(allTracksPlaylist);
+  });
+
 // ADD PLAYLIST
 
 addPlaylist.addEventListener("click", addNewPlaylist);
