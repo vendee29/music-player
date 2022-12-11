@@ -43,25 +43,46 @@ app.get("/playlists", (req, res) => {
 
 // POST /playlists // title is required
 
-app.post('/playlists', (req, res) => {
-    let title = req.body.title;
+app.post("/playlists", (req, res) => {
+  let title = req.body.title;
 
-    if(title == 'null' || title == null || title == undefined) {
-        res.status(400).json({
-            message: 'No playlist was added.'
-        });
-    }
+  if (title == "null" || title == null || title == undefined) {
+    res.status(400).json({
+      message: "No playlist was added.",
+    });
+  }
 
-    createPlaylist(title)
-    .then(result => {
-        if(result.message == 'This title is already in use.') {
-            res.status(400).json(result);
-        } else {
-            res.status(200).json(result);
-        }
+  createPlaylist(title)
+    .then((result) => {
+      if (result.message == "This title is already in use.") {
+        res.status(400).json(result);
+      } else {
+        res.status(200).json(result);
+      }
     })
-    .catch(err => console.log(err))
-})
+    .catch((err) => console.log(err));
+});
+
+// DELETE /playlists/:id
+
+app.delete("/playlists/:id", (req, res) => {
+  if (!req.params.id || isNaN(req.params.id)) {
+    res.status(400).json({
+      error: "Please provide a valid playlist id.",
+    });
+  } else {
+    let id = req.params.id;
+    deletePlaylist(id)
+      .then((result) => {
+        if (result.message) {
+          res.status(400).json(result);
+        } else {
+          res.status(204).json(result);
+        }
+      })
+      .catch((err) => console.log(err));
+  }
+});
 
 // PORT LISTEN
 
@@ -72,29 +93,55 @@ app.listen(port, () => {
 // HELPER FUNCTIONS
 
 function queryDb(sqlQuery, valuesArr) {
-    return new Promise((resolve, reject) => {
-        conn.query(sqlQuery, valuesArr, (err, result) => {
-            if(err) {
-                return reject('DATABASE ERROR');
-            } else {
-                return resolve(result);
-            }
-        })
-    }) 
+  return new Promise((resolve, reject) => {
+    conn.query(sqlQuery, valuesArr, (err, result) => {
+      if (err) {
+        return reject("DATABASE ERROR");
+      } else {
+        return resolve(result);
+      }
+    });
+  });
 }
 
 // create playlist
 
 async function createPlaylist(title) {
-    let select = await queryDb('SELECT * FROM playlists WHERE title = ?', [title]);
-    if(select.length > 0) {
-        return {
-            'message': 'This title is already in use.'
-        }
-    } else {
-        let insert = await queryDb('INSERT INTO playlists (title) VALUES (?)', [title]);
-        return {
-            'message': `The playlist ${title} was added.`
-        }
-    }
+  let select = await queryDb("SELECT * FROM playlists WHERE title = ?", [
+    title,
+  ]);
+  if (select.length > 0) {
+    return {
+      message: "This title is already in use.",
+    };
+  } else {
+    let insert = await queryDb("INSERT INTO playlists (title) VALUES (?)", [
+      title,
+    ]);
+    return {
+      message: `The playlist ${title} was added.`,
+    };
+  }
+}
+
+// delete playlist
+
+async function deletePlaylist(id) {
+  let select = await queryDb(
+    "SELECT * FROM playlists WHERE system_rank = ? AND id = ?",
+    [1, id]
+  );
+  if (select.length > 0) {
+    return {
+      message: "This playlist cannot be deleted.",
+    };
+  }
+  let response = await queryDb("DELETE FROM playlists WHERE id = ?", [id]);
+  if (response.affectedRows == 0) {
+    return {
+      message: "Something went wrong. No playlist was deleted.",
+    };
+  } else {
+    return response;
+  }
 }
