@@ -75,6 +75,18 @@ audio.onplay = () => {
     setSelectedRow(allTracksPlaylist);
   });
 
+  // VOLUME
+
+volumeBar.addEventListener("change", setVolume);
+
+volumeBtn.addEventListener("click", () => {
+  if (volumeBtn.classList.contains("muted")) {
+    unmuteAudio();
+  } else {
+    muteAudio();
+  }
+});
+
 // ADD PLAYLIST
 
 addPlaylist.addEventListener("click", addNewPlaylist);
@@ -307,4 +319,28 @@ function loadTrack(track_id) {
       },
       body: JSON.stringify(bodyValues),
     });
+  }
+
+  // VOLUME
+
+function setVolume(event) {
+    if (volumeBtn.classList.contains("muted")) {
+      volumeBtn.classList.remove("muted");
+      volumeBtn.classList.add("not-muted");
+    }
+    audio.volume = event.currentTarget.value / 100;
+  }
+  
+  function muteAudio() {
+    volumeBtn.classList.add("muted");
+    volumeBtn.classList.remove("not-muted");
+    audio.volume = 0;
+    volumeBar.value = 1;
+  }
+  
+  function unmuteAudio() {
+    volumeBtn.classList.remove("muted");
+    volumeBtn.classList.add("not-muted");
+    audio.volume = 0.1;
+    volumeBar.value = 1;
   }
